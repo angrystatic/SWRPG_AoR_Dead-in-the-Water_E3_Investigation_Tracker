@@ -42,6 +42,13 @@
             border-color: #FBBF24 !important;
             border-width: 4px !important;
         }
+        .toast {
+            animation: fadeInOut 3s forwards;
+        }
+        @keyframes fadeInOut {
+            0%, 100% { opacity: 0; transform: translateY(-20px); }
+            10%, 90% { opacity: 1; transform: translateY(0); }
+        }
     </style>
 </head>
 <body class="text-white">
@@ -57,9 +64,11 @@
                     Undiscovered Clues
                 </button>
             </div>
-            <h1 class="font-orbitron text-2xl text-amber-400">INVESTIGATION TRACKER</h1>
-            <div>
-                <button id="edit-board-btn" class="bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 px-4 rounded-lg">
+            <h1 class="font-orbitron text-xl md:text-2xl text-amber-400">INVESTIGATION TRACKER</h1>
+            <div class="flex items-center">
+                <button id="save-state-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg">Save</button>
+                <button id="load-state-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg ml-2">Load</button>
+                <button id="edit-board-btn" class="bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 px-4 rounded-lg ml-4">
                     Edit Board
                 </button>
                  <button id="reset-view-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg ml-2">
@@ -86,11 +95,16 @@
                 <p class="italic">Click on a node on the board to see its details.</p>
             </div>
         </div>
+        
+        <!-- Toast Notification -->
+        <div id="toast" class="hidden absolute top-20 left-1/2 -translate-x-1/2 bg-gray-700 text-white py-2 px-4 rounded-lg shadow-lg z-30"></div>
+
     </div>
 
     <script>
     document.addEventListener('DOMContentLoaded', () => {
         const container = document.getElementById('evidence-board');
+        const SAVE_KEY = 'aorEpisode3TrackerState';
 
         // --- 1. Define All Possible Nodes ---
         const allNodes = [
@@ -120,9 +134,17 @@
             { id: 30, label: 'PLOT REVEALED', group: 3, initialState: 'hidden', details: "<b>Conclusion:</b> The entire operation was a plot by Imperial Intelligence, led by Lt. Hura Kogler (Shyndi), to use saboteur droids to locate the Rebel fleet." }
         ];
 
-        let undiscoveredNodes = allNodes.filter(n => n.initialState === 'hidden');
-        const activeNodes = new vis.DataSet(allNodes.filter(n => n.initialState === 'active'));
-        const edges = new vis.DataSet([]);
+        let undiscoveredNodes;
+        let activeNodes;
+        let edges;
+        
+        function initializeState() {
+            undiscoveredNodes = allNodes.filter(n => n.initialState === 'hidden');
+            activeNodes = new vis.DataSet(allNodes.filter(n => n.initialState === 'active'));
+            edges = new vis.DataSet([]);
+        }
+
+        initializeState();
 
         // --- 2. Configure Network Options ---
         const options = {
@@ -158,16 +180,23 @@
         // --- 3. Initialize Network ---
         const network = new vis.Network(container, { nodes: activeNodes, edges: edges }, options);
 
-        // --- 4. Handle Interactivity ---
+        // --- 4. Handle Interactivity & UI ---
         const infoPanel = document.getElementById('info-panel');
         const infoTitle = document.getElementById('info-title');
         const infoContent = document.getElementById('info-content');
         const cluesPanel = document.getElementById('clues-panel');
         const cluesList = document.getElementById('clues-list');
         const editBoardBtn = document.getElementById('edit-board-btn');
+        const toast = document.getElementById('toast');
         
         let editMode = false;
         let firstNodeForConnection = null;
+
+        function showToast(message) {
+            toast.innerText = message;
+            toast.classList.remove('hidden');
+            setTimeout(() => toast.classList.add('hidden'), 2900);
+        }
 
         function renderUndiscoveredList() {
             cluesList.innerHTML = '';
@@ -179,7 +208,44 @@
                 cluesList.appendChild(item);
             });
         }
+        
+        // --- Save/Load Logic ---
+        function saveState() {
+            const state = {
+                activeNodeIds: activeNodes.getIds(),
+                edgeData: edges.get(),
+            };
+            localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+            showToast("Investigation state saved!");
+        }
 
+        function loadState() {
+            const savedState = localStorage.getItem(SAVE_KEY);
+            if (!savedState) {
+                showToast("No saved state found.");
+                return;
+            }
+            const state = JSON.parse(savedState);
+            
+            // Repopulate nodes
+            activeNodes.clear();
+            const loadedActiveNodes = allNodes.filter(n => state.activeNodeIds.includes(n.id));
+            activeNodes.add(loadedActiveNodes);
+            
+            undiscoveredNodes = allNodes.filter(n => !state.activeNodeIds.includes(n.id));
+            
+            // Repopulate edges
+            edges.clear();
+            edges.add(state.edgeData);
+
+            renderUndiscoveredList();
+            showToast("Investigation state loaded!");
+        }
+
+        document.getElementById('save-state-btn').addEventListener('click', saveState);
+        document.getElementById('load-state-btn').addEventListener('click', loadState);
+
+        // --- Event Listeners for UI ---
         document.getElementById('toggle-clues-btn').addEventListener('click', () => {
             cluesPanel.classList.toggle('-left-full');
             cluesPanel.classList.toggle('left-0');
@@ -206,7 +272,6 @@
 
             if (editMode) {
                 if (nodes.length > 0) {
-                    // --- Handle Node Clicks in Edit Mode (for connecting) ---
                     const clickedNodeId = nodes[0];
                     if (!firstNodeForConnection) {
                         firstNodeForConnection = clickedNodeId;
@@ -219,20 +284,17 @@
                         firstNodeForConnection = null;
                     }
                 } else if (clickedEdges.length > 0) {
-                    // --- Handle Edge Clicks in Edit Mode (for deleting) ---
                     edges.remove(clickedEdges[0]);
                 } else {
-                     // --- Handle Canvas Click in Edit Mode (for deselecting) ---
                     network.unselectAll();
                     firstNodeForConnection = null;
                 }
             } else {
-                // --- Handle Clicks in Normal Mode (for info panel) ---
                 if (nodes.length > 0) {
                     const clickedNode = activeNodes.get(nodes[0]);
                     infoTitle.innerText = clickedNode.label;
                     infoContent.innerHTML = `<div class="p-4 bg-gray-800 rounded-lg">
-                                                <p class="italic text-gray-500">Details are hidden. Reveal when players discover this information.</p>
+                                                <p class="italic text-gray-500">Details are hidden.</p>
                                              </div>
                                              <button id="reveal-btn" class="mt-4 w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">Reveal Details</button>`;
                     
@@ -253,27 +315,27 @@
 
         document.getElementById('reset-view-btn').addEventListener('click', () => network.fit());
 
-        // Edit Mode Toggle
         editBoardBtn.addEventListener('click', () => {
             editMode = !editMode;
             if (editMode) {
                 editBoardBtn.innerText = 'Finish Editing';
                 editBoardBtn.classList.add('ring-4', 'ring-amber-400');
-                network.unselectAll();
-                firstNodeForConnection = null;
-                 // Close info panel if open
-                infoPanel.classList.remove('right-0');
-                infoPanel.classList.add('-right-full');
             } else {
                 editBoardBtn.innerText = 'Edit Board';
                 editBoardBtn.classList.remove('ring-4', 'ring-amber-400');
-                network.unselectAll();
-                firstNodeForConnection = null;
             }
+            network.unselectAll();
+            firstNodeForConnection = null;
+            infoPanel.classList.remove('right-0');
+            infoPanel.classList.add('-right-full');
         });
 
-        // Initial Render
-        renderUndiscoveredList();
+        // --- Initial Load ---
+        if (localStorage.getItem(SAVE_KEY)) {
+            loadState();
+        } else {
+            renderUndiscoveredList();
+        }
     });
     </script>
 </body>
