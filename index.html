@@ -49,6 +49,25 @@
             0%, 100% { opacity: 0; transform: translateY(-20px); }
             10%, 90% { opacity: 1; transform: translateY(0); }
         }
+        /* Narrative Dice Styles */
+        .dice {
+            display: inline-block;
+            width: 1em;
+            height: 1em;
+            margin: 0 0.1em;
+            vertical-align: -0.15em;
+        }
+        .d8 { transform: rotate(45deg); border-radius: 2px; }
+        .d12 {
+            clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+        }
+        .d6 { border-radius: 2px; }
+        .purple { background-color: #a855f7; }
+        .green { background-color: #22c55e; }
+        .yellow { background-color: #eab308; }
+        .red { background-color: #ef4444; }
+        .blue { background-color: #3b82f6; }
+        .black { background-color: #1f2937; border: 1px solid #6b7280; }
     </style>
 </head>
 <body class="text-white">
@@ -111,11 +130,11 @@
             // People (Group 0)
             { id: 1, label: 'Shyndi Oglerk', group: 0, initialState: 'hidden', details: "<b>Alias:</b> Captain of the Contispex Crusader.<br><b>True Identity:</b> Lt. Hura Kogler, Imperial Intelligence.<br><b>Role:</b> Leader of the saboteur droid plot. Will surrender if cornered without backup.<br><b>Father:</b> The legendary Hyndis Kogler." },
             { id: 2, label: 'First Mate Kog', group: 0, initialState: 'hidden', details: "<b>Role:</b> Shyndi's second-in-command. Handles logistics.<br><b>Actions:</b> Visited Port Tooga alone a week prior, speaking with Kwiggley and a spacer. Flew a modified Nubian transport.<br><b>Loyalty:</b> Will abandon Shyndi to escape." },
-            { id: 3, label: 'Roowarra', group: 0, initialState: 'hidden', details: "<b>Description:</b> A mangled, one-eyed Wookiee at the Barvy Harpy.<br><b>Information:</b> Mistook the PCs for Imperials. If befriended, he can direct the party to 'Droid-Arm' Aymus." },
-            { id: 4, label: '"Droid-Arm" Aymus', group: 0, initialState: 'hidden', details: "<b>Description:</b> A Weequay pirate with a mechanical arm.<br><b>Information:</b> Suspects the 'Contispex Crusader' is not a real pirate ship (too new, not hiring). Heard rumors it berths on Teagan." },
-            { id: 5, label: 'Kwiggley', group: 0, initialState: 'hidden', details: "<b>Description:</b> A Bimm junk dealer on Port Tooga specializing in droid parts.<br><b>Information:</b> Sold Kog a T-series tactical droid logic processor. Can identify the 'TTC' chips as from the Teagan Tech Consortium." },
-            { id: 6, label: 'Shoola the Hutt', group: 0, initialState: 'hidden', details: "<b>Description:</b> Crime lord who runs Port Tooga. Known for mixing business with pleasure.<br><b>Information:</b> Can provide docking/sensor logs showing Kog's visit and his meetings. Can direct PCs to Kwiggley." },
-            { id: 7, label: 'Biscuit Barren Spacers', group: 0, initialState: 'hidden', details: "<b>Description:</b> Two spacers overheard at the Biscuit Barren.<br><b>Information:</b> Delivered droid parts to a warehouse on Teagan for TTC. One has bushy sideburns (the man Kog spoke to)." },
+            { id: 3, label: 'Roowarra', group: 0, initialState: 'hidden', details: "<b>Description:</b> A mangled, one-eyed Wookiee at the Barvy Harpy.", checks: ["No check needed if befriended; he directs the PCs to Aymus."] },
+            { id: 4, label: '"Droid-Arm" Aymus', group: 0, initialState: 'hidden', details: "<b>Information:</b> Suspects the 'Contispex Crusader' is not a real pirate ship (too new, not hiring). Heard rumors it berths on Teagan.", checks: ["Easy Charm (D◆) or Hard Coercion (D◆D◆D◆), plus buying him a drink."] },
+            { id: 5, label: 'Kwiggley', group: 0, initialState: 'hidden', details: "<b>Information:</b> Sold Kog a T-series tactical droid logic processor. Can identify the 'TTC' chips as from the Teagan Tech Consortium.", checks: ["Average Coercion (D◆D◆) or Negotiation (D◆D◆).<br>Hard Charm (D◆D◆D◆) or Deception (D◆D◆D◆)."] },
+            { id: 6, label: 'Shoola the Hutt', group: 0, initialState: 'hidden', details: "<b>Information:</b> Can provide docking/sensor logs showing Kog's visit and his meetings. Can direct PCs to Kwiggley.", checks: ["Average Charm (D◆D◆), Hard Negotiation (D◆D◆D◆), or Daunting Coercion (D◆D◆D◆D◆)."] },
+            { id: 7, label: 'Biscuit Barren Spacers', group: 0, initialState: 'hidden', details: "<b>Information:</b> Delivered droid parts to a warehouse on Teagan for TTC. One has bushy sideburns (the man Kog spoke to).", checks: ["Average Charm (D◆D◆), Coercion (D◆D◆), or Negotiation (D◆D◆)."] },
 
             // Locations (Group 1)
             { id: 10, label: 'Port Tooga', group: 1, initialState: 'active', details: "<b>Description:</b> A smuggler's haven orbiting dangerously close to the star in the Listehol system. Run by Shoola the Hutt." },
@@ -125,9 +144,9 @@
             { id: 14, label: 'TTC Headquarters', group: 1, initialState: 'hidden', details: "<b>Description:</b> Teagan Tech Consortium. A prosperous, modern droid manufacturer on Teagan." },
 
             // Evidence (Group 2)
-            { id: 20, label: 'Saboteur Droid', group: 2, initialState: 'active', details: "<b>Analysis:</b> Reveals a non-standard chip hardwired to the brain, stamped 'TTC'." },
+            { id: 20, label: 'Saboteur Droid', group: 2, initialState: 'active', details: "<b>Analysis:</b> Reveals a non-standard chip hardwired to the brain, stamped 'TTC'.", checks: ["Average Computers (D◆D◆) or Mechanics (D◆D◆) check."] },
             { id: 21, label: "'TTC' Chip", group: 2, initialState: 'hidden', details: "<b>Description:</b> A modified behavioral inhibitor. TTC techs reveal it was part of a batch sold to Kwymar Automaton Ltd." },
-            { id: 22, label: 'Tug Navicomputer', group: 2, initialState: 'active', details: "<b>Analysis:</b> A Daunting Computers check reveals the tug recently traveled from Teagan." },
+            { id: 22, label: 'Tug Navicomputer', group: 2, initialState: 'active', details: "<b>Analysis:</b> Reveals the tug recently traveled from Teagan.", checks: ["Daunting Computers check (D◆D◆D◆D◆)."] },
             { id: 23, label: 'Nubian Transport', group: 2, initialState: 'hidden', details: "<b>Registry:</b> Can be traced to Kwymar Automaton Ltd. on Teagan. Used by Kog and Shyndi." },
 
             // Intel (Group 3)
@@ -208,6 +227,18 @@
                 cluesList.appendChild(item);
             });
         }
+
+        function parseDiceString(str) {
+            const diceMap = {
+                'A◆': '<span class="dice d8 green"></span>',
+                'D◆': '<span class="dice d8 purple"></span>',
+                'P◆': '<span class="dice d12 yellow"></span>',
+                'C◆': '<span class="dice d12 red"></span>',
+                'B◆': '<span class="dice d6 blue"></span>',
+                'S◆': '<span class="dice d6 black"></span>'
+            };
+            return str.replace(/(A◆|D◆|P◆|C◆|B◆|S◆)/g, match => diceMap[match]);
+        }
         
         // --- Save/Load Logic ---
         function saveState() {
@@ -227,14 +258,12 @@
             }
             const state = JSON.parse(savedState);
             
-            // Repopulate nodes
             activeNodes.clear();
             const loadedActiveNodes = allNodes.filter(n => state.activeNodeIds.includes(n.id));
             activeNodes.add(loadedActiveNodes);
             
             undiscoveredNodes = allNodes.filter(n => !state.activeNodeIds.includes(n.id));
             
-            // Repopulate edges
             edges.clear();
             edges.add(state.edgeData);
 
@@ -293,13 +322,23 @@
                 if (nodes.length > 0) {
                     const clickedNode = activeNodes.get(nodes[0]);
                     infoTitle.innerText = clickedNode.label;
-                    infoContent.innerHTML = `<div class="p-4 bg-gray-800 rounded-lg">
-                                                <p class="italic text-gray-500">Details are hidden.</p>
-                                             </div>
-                                             <button id="reveal-btn" class="mt-4 w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">Reveal Details</button>`;
+                    let contentHTML = `<div class="p-4 bg-gray-800 rounded-lg">
+                                            <p class="italic text-gray-500">Details are hidden.</p>
+                                         </div>
+                                         <button id="reveal-btn" class="mt-4 w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">Reveal Details</button>`;
+                    infoContent.innerHTML = contentHTML;
                     
                     document.getElementById('reveal-btn').onclick = () => {
-                        infoContent.innerHTML = `<div class="p-4 bg-gray-800 rounded-lg space-y-2">${clickedNode.details}</div>`;
+                        let revealedHTML = `<div class="p-4 bg-gray-800 rounded-lg space-y-2">${clickedNode.details}</div>`;
+                        if (clickedNode.checks) {
+                             revealedHTML += `<h3 class="font-orbitron text-lg text-amber-300 mt-4 pt-2 border-t border-amber-500/20">Checks Required</h3>`;
+                             revealedHTML += `<div class="space-y-2 text-amber-200">`;
+                             clickedNode.checks.forEach(check => {
+                                revealedHTML += `<p>${parseDiceString(check)}</p>`;
+                             });
+                             revealedHTML += `</div>`;
+                        }
+                        infoContent.innerHTML = revealedHTML;
                     };
 
                     infoPanel.classList.remove('-right-full');
