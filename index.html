@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Star Wars AoR - Episode III Investigation Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.css" rel="stylesheet" type="text/css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Orbitron:wght@700&display=swap" rel="stylesheet">
+    <style>
+        body, html {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a; /* Slate 900 */
+        }
+        .font-orbitron {
+            font-family: 'Orbitron', sans-serif;
+        }
+        #evidence-board {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+        .vis-network {
+             background-color: #0f172a;
+             background-image: 
+                radial-gradient(white, rgba(255,255,255,.1) 1px, transparent 20px),
+                radial-gradient(white, rgba(255,255,255,.05) 1px, transparent 15px);
+            background-size: 250px 250px, 150px 150px;
+            background-position: 0 0, 40px 60px;
+        }
+        .info-panel, .clues-panel {
+            transition: all 0.3s ease-in-out;
+        }
+        .vis-node.selected {
+            border-color: #FBBF24 !important;
+            border-width: 4px !important;
+        }
+    </style>
+</head>
+<body class="text-white">
+
+    <!-- Main Container -->
+    <div id="main-container" class="w-full h-full relative">
+        <div id="evidence-board"></div>
+        
+        <!-- Header / Controls -->
+        <div class="absolute top-0 left-0 w-full p-4 bg-gray-900/50 backdrop-blur-sm z-10 flex justify-between items-center">
+             <div>
+                <button id="toggle-clues-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg">
+                    Undiscovered Clues
+                </button>
+            </div>
+            <h1 class="font-orbitron text-2xl text-amber-400">INVESTIGATION TRACKER</h1>
+            <div>
+                <button id="edit-board-btn" class="bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 px-4 rounded-lg">
+                    Edit Board
+                </button>
+                 <button id="reset-view-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg ml-2">
+                    Reset View
+                </button>
+            </div>
+        </div>
+
+        <!-- Undiscovered Clues Panel -->
+        <div id="clues-panel" class="clues-panel absolute top-0 -left-full w-full md:w-1/3 lg:w-1/4 h-full bg-gray-900/80 backdrop-blur-sm z-20 shadow-lg p-6 overflow-y-auto">
+             <button id="clues-close-panel-btn" class="absolute top-4 right-4 text-gray-400 hover:text-white text-2xl">&times;</button>
+            <h2 class="font-orbitron text-xl text-green-300 mb-4 border-b-2 border-green-500/30 pb-2">Undiscovered Clues</h2>
+            <div id="clues-list" class="text-gray-300 space-y-2">
+                <!-- Undiscovered clues will be listed here -->
+            </div>
+        </div>
+
+
+        <!-- Info Panel -->
+        <div id="info-panel" class="info-panel absolute top-0 -right-full w-full md:w-1/3 lg:w-1/4 h-full bg-gray-900/80 backdrop-blur-sm z-20 shadow-lg p-6 overflow-y-auto">
+            <button id="info-close-panel-btn" class="absolute top-4 right-4 text-gray-400 hover:text-white text-2xl">&times;</button>
+            <h2 id="info-title" class="font-orbitron text-xl text-cyan-300 mb-4 border-b-2 border-cyan-500/30 pb-2">Select a Clue</h2>
+            <div id="info-content" class="text-gray-300">
+                <p class="italic">Click on a node on the board to see its details.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const container = document.getElementById('evidence-board');
+
+        // --- 1. Define All Possible Nodes ---
+        const allNodes = [
+            // People (Group 0)
+            { id: 1, label: 'Shyndi Oglerk', group: 0, initialState: 'hidden', details: "<b>Alias:</b> Captain of the Contispex Crusader.<br><b>True Identity:</b> Lt. Hura Kogler, Imperial Intelligence.<br><b>Role:</b> Leader of the saboteur droid plot. Will surrender if cornered without backup.<br><b>Father:</b> The legendary Hyndis Kogler." },
+            { id: 2, label: 'First Mate Kog', group: 0, initialState: 'hidden', details: "<b>Role:</b> Shyndi's second-in-command. Handles logistics.<br><b>Actions:</b> Visited Port Tooga alone a week prior, speaking with Kwiggley and a spacer. Flew a modified Nubian transport.<br><b>Loyalty:</b> Will abandon Shyndi to escape." },
+            { id: 3, label: 'Roowarra', group: 0, initialState: 'hidden', details: "<b>Description:</b> A mangled, one-eyed Wookiee at the Barvy Harpy.<br><b>Information:</b> Mistook the PCs for Imperials. If befriended, he can direct the party to 'Droid-Arm' Aymus." },
+            { id: 4, label: '"Droid-Arm" Aymus', group: 0, initialState: 'hidden', details: "<b>Description:</b> A Weequay pirate with a mechanical arm.<br><b>Information:</b> Suspects the 'Contispex Crusader' is not a real pirate ship (too new, not hiring). Heard rumors it berths on Teagan." },
+            { id: 5, label: 'Kwiggley', group: 0, initialState: 'hidden', details: "<b>Description:</b> A Bimm junk dealer on Port Tooga specializing in droid parts.<br><b>Information:</b> Sold Kog a T-series tactical droid logic processor. Can identify the 'TTC' chips as from the Teagan Tech Consortium." },
+            { id: 6, label: 'Shoola the Hutt', group: 0, initialState: 'hidden', details: "<b>Description:</b> Crime lord who runs Port Tooga. Known for mixing business with pleasure.<br><b>Information:</b> Can provide docking/sensor logs showing Kog's visit and his meetings. Can direct PCs to Kwiggley." },
+            { id: 7, label: 'Biscuit Barren Spacers', group: 0, initialState: 'hidden', details: "<b>Description:</b> Two spacers overheard at the Biscuit Barren.<br><b>Information:</b> Delivered droid parts to a warehouse on Teagan for TTC. One has bushy sideburns (the man Kog spoke to)." },
+
+            // Locations (Group 1)
+            { id: 10, label: 'Port Tooga', group: 1, initialState: 'active', details: "<b>Description:</b> A smuggler's haven orbiting dangerously close to the star in the Listehol system. Run by Shoola the Hutt." },
+            { id: 11, label: 'The Barvy Harpy', group: 1, initialState: 'hidden', details: "<b>Description:</b> A raucous cantina on Port Tooga where the PCs first meet Shyndi." },
+            { id: 12, label: 'Teagan', group: 1, initialState: 'hidden', details: "<b>Description:</b> A mountainous planet off the Listehol Run, home to the Devon species and numerous droid factories, both active and abandoned." },
+            { id: 13, label: 'KA Ltd. Factory', group: 1, initialState: 'hidden', details: "<b>Description:</b> Kwymar Automaton Ltd. An abandoned droid factory on Teagan used as the base for the Imperial operation. Consists of offices, a garage, and a warehouse." },
+            { id: 14, label: 'TTC Headquarters', group: 1, initialState: 'hidden', details: "<b>Description:</b> Teagan Tech Consortium. A prosperous, modern droid manufacturer on Teagan." },
+
+            // Evidence (Group 2)
+            { id: 20, label: 'Saboteur Droid', group: 2, initialState: 'active', details: "<b>Analysis:</b> Reveals a non-standard chip hardwired to the brain, stamped 'TTC'." },
+            { id: 21, label: "'TTC' Chip", group: 2, initialState: 'hidden', details: "<b>Description:</b> A modified behavioral inhibitor. TTC techs reveal it was part of a batch sold to Kwymar Automaton Ltd." },
+            { id: 22, label: 'Tug Navicomputer', group: 2, initialState: 'active', details: "<b>Analysis:</b> A Daunting Computers check reveals the tug recently traveled from Teagan." },
+            { id: 23, label: 'Nubian Transport', group: 2, initialState: 'hidden', details: "<b>Registry:</b> Can be traced to Kwymar Automaton Ltd. on Teagan. Used by Kog and Shyndi." },
+
+            // Intel (Group 3)
+            { id: 30, label: 'PLOT REVEALED', group: 3, initialState: 'hidden', details: "<b>Conclusion:</b> The entire operation was a plot by Imperial Intelligence, led by Lt. Hura Kogler (Shyndi), to use saboteur droids to locate the Rebel fleet." }
+        ];
+
+        let undiscoveredNodes = allNodes.filter(n => n.initialState === 'hidden');
+        const activeNodes = new vis.DataSet(allNodes.filter(n => n.initialState === 'active'));
+        const edges = new vis.DataSet([]);
+
+        // --- 2. Configure Network Options ---
+        const options = {
+            nodes: {
+                shape: 'box',
+                font: { color: '#ffffff', face: 'Inter' },
+                borderWidth: 2,
+                margin: 10,
+            },
+            edges: {
+                color: '#888888',
+                arrows: 'to',
+                smooth: { type: 'cubicBezier' }
+            },
+            groups: {
+                0: { color: { background: '#9A3412', border: '#FB923C' } },
+                1: { color: { background: '#1D4ED8', border: '#60A5FA' } },
+                2: { color: { background: '#065F46', border: '#34D399' } },
+                3: { color: { background: '#991B1B', border: '#F87171' } }
+            },
+            physics: {
+                solver: 'forceAtlas2Based',
+                forceAtlas2Based: { gravitationalConstant: -50, centralGravity: 0.01, springLength: 200, springConstant: 0.08, avoidOverlap: 0.5 }
+            },
+            interaction: {
+                dragNodes: true,
+                dragView: true,
+                zoomView: true,
+                selectConnectedEdges: false,
+            },
+        };
+
+        // --- 3. Initialize Network ---
+        const network = new vis.Network(container, { nodes: activeNodes, edges: edges }, options);
+
+        // --- 4. Handle Interactivity ---
+        const infoPanel = document.getElementById('info-panel');
+        const infoTitle = document.getElementById('info-title');
+        const infoContent = document.getElementById('info-content');
+        const cluesPanel = document.getElementById('clues-panel');
+        const cluesList = document.getElementById('clues-list');
+        const editBoardBtn = document.getElementById('edit-board-btn');
+        
+        let editMode = false;
+        let firstNodeForConnection = null;
+
+        function renderUndiscoveredList() {
+            cluesList.innerHTML = '';
+            undiscoveredNodes.sort((a,b) => a.label.localeCompare(b.label)).forEach(node => {
+                const item = document.createElement('div');
+                item.className = 'flex items-center justify-between bg-gray-800 p-2 rounded';
+                item.innerHTML = `<span>${node.label}</span>
+                                  <button data-id="${node.id}" class="add-node-btn bg-green-700 hover:bg-green-800 text-xs py-1 px-2 rounded">Add</button>`;
+                cluesList.appendChild(item);
+            });
+        }
+
+        document.getElementById('toggle-clues-btn').addEventListener('click', () => {
+            cluesPanel.classList.toggle('-left-full');
+            cluesPanel.classList.toggle('left-0');
+        });
+        document.getElementById('clues-close-panel-btn').addEventListener('click', () => {
+            cluesPanel.classList.add('-left-full');
+            cluesPanel.classList.remove('left-0');
+        });
+        
+        cluesList.addEventListener('click', (e) => {
+            if (e.target.classList.contains('add-node-btn')) {
+                const nodeId = parseInt(e.target.dataset.id);
+                const nodeToAdd = undiscoveredNodes.find(n => n.id === nodeId);
+                if (nodeToAdd) {
+                    activeNodes.add(nodeToAdd);
+                    undiscoveredNodes = undiscoveredNodes.filter(n => n.id !== nodeId);
+                    renderUndiscoveredList();
+                }
+            }
+        });
+        
+        network.on('click', function(properties) {
+            const { nodes, edges: clickedEdges } = properties;
+
+            if (editMode) {
+                if (nodes.length > 0) {
+                    // --- Handle Node Clicks in Edit Mode (for connecting) ---
+                    const clickedNodeId = nodes[0];
+                    if (!firstNodeForConnection) {
+                        firstNodeForConnection = clickedNodeId;
+                        network.selectNodes([firstNodeForConnection]);
+                    } else {
+                        if (firstNodeForConnection !== clickedNodeId) {
+                            edges.add({ from: firstNodeForConnection, to: clickedNodeId, arrows: 'to' });
+                        }
+                        network.unselectAll();
+                        firstNodeForConnection = null;
+                    }
+                } else if (clickedEdges.length > 0) {
+                    // --- Handle Edge Clicks in Edit Mode (for deleting) ---
+                    edges.remove(clickedEdges[0]);
+                } else {
+                     // --- Handle Canvas Click in Edit Mode (for deselecting) ---
+                    network.unselectAll();
+                    firstNodeForConnection = null;
+                }
+            } else {
+                // --- Handle Clicks in Normal Mode (for info panel) ---
+                if (nodes.length > 0) {
+                    const clickedNode = activeNodes.get(nodes[0]);
+                    infoTitle.innerText = clickedNode.label;
+                    infoContent.innerHTML = `<div class="p-4 bg-gray-800 rounded-lg">
+                                                <p class="italic text-gray-500">Details are hidden. Reveal when players discover this information.</p>
+                                             </div>
+                                             <button id="reveal-btn" class="mt-4 w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">Reveal Details</button>`;
+                    
+                    document.getElementById('reveal-btn').onclick = () => {
+                        infoContent.innerHTML = `<div class="p-4 bg-gray-800 rounded-lg space-y-2">${clickedNode.details}</div>`;
+                    };
+
+                    infoPanel.classList.remove('-right-full');
+                    infoPanel.classList.add('right-0');
+                }
+            }
+        });
+
+        document.getElementById('info-close-panel-btn').addEventListener('click', () => {
+            infoPanel.classList.remove('right-0');
+            infoPanel.classList.add('-right-full');
+        });
+
+        document.getElementById('reset-view-btn').addEventListener('click', () => network.fit());
+
+        // Edit Mode Toggle
+        editBoardBtn.addEventListener('click', () => {
+            editMode = !editMode;
+            if (editMode) {
+                editBoardBtn.innerText = 'Finish Editing';
+                editBoardBtn.classList.add('ring-4', 'ring-amber-400');
+                network.unselectAll();
+                firstNodeForConnection = null;
+                 // Close info panel if open
+                infoPanel.classList.remove('right-0');
+                infoPanel.classList.add('-right-full');
+            } else {
+                editBoardBtn.innerText = 'Edit Board';
+                editBoardBtn.classList.remove('ring-4', 'ring-amber-400');
+                network.unselectAll();
+                firstNodeForConnection = null;
+            }
+        });
+
+        // Initial Render
+        renderUndiscoveredList();
+    });
+    </script>
+</body>
+</html>
